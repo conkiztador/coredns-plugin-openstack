@@ -69,6 +69,12 @@ func openstackParse(c *caddy.Controller) (*OpenStack, error) {
 					return nil, c.ArgErr()
 				}
 				authOpts.Password = args[0]
+			case "project_name":
+				args := c.RemainingArgs()
+				if len(args) != 1 {
+					return nil, c.ArgErr()
+				}
+				authOpts.TenantName = args[0]
 			case "domain_name":
 				args := c.RemainingArgs()
 				if len(args) != 1 {
