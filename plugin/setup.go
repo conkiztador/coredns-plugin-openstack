@@ -42,8 +42,10 @@ func openstackParse(c *caddy.Controller) (*OpenStack, error) {
 	}
 
 	os := OpenStack{
-		Region:         "RegionOne",
-		EnableWildcard: false,
+		Region:              "RegionOne",
+		EnableWildcard:      false,
+		FloatingIpsOnly:     true,
+		ExternalNetworkName: "",
 	}
 	os.Entries = &entries
 	os.AuthOptions = &authOpts
@@ -93,6 +95,18 @@ func openstackParse(c *caddy.Controller) (*OpenStack, error) {
 					return nil, c.ArgErr()
 				}
 				os.EnableWildcard = true
+			case "external_network_name":
+				args := c.RemainingArgs()
+				if len(args) != 1 {
+					return nil, c.ArgErr()
+				}
+				os.ExternalNetworkName = args[0]
+			case "any_ips":
+				args := c.RemainingArgs()
+				if len(args) != 0 {
+					return nil, c.ArgErr()
+				}
+				os.FloatingIpsOnly = false
 			default:
 				return nil, c.Errf("unknown property '%s'", c.Val())
 			}

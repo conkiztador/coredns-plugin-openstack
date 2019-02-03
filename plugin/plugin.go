@@ -5,19 +5,9 @@ import (
 	"strings"
 
 	"github.com/coredns/coredns/request"
-	"github.com/gophercloud/gophercloud"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
-
-// OpenStack is a plugin to talk to an OpenStack API.
-type OpenStack struct {
-	Zone           string
-	Entries        *DNSEntries
-	AuthOptions    *gophercloud.AuthOptions
-	Region         string
-	EnableWildcard bool
-}
 
 // Name implements the plugin.Handler interface.
 func (os OpenStack) Name() string {

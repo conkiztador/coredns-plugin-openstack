@@ -22,13 +22,26 @@ type serverEntry struct {
 	Addresses  []string
 }
 
-func extractFloating(addresses map[string]interface{}) []string {
+type OpenStack struct {
+	Zone                string
+	Entries             *DNSEntries
+	AuthOptions         *gophercloud.AuthOptions
+	Region              string
+	EnableWildcard      bool
+	FloatingIpsOnly     bool
+	ExternalNetworkName string
+}
+
+func (os OpenStack) extractAddresses(addresses map[string]interface{}) []string {
 	floatings := make([]string, 0)
-	for _, addrList := range addresses {
+	for network, addrList := range addresses {
+		if (os.ExternalNetworkName != "") && (network != os.ExternalNetworkName) {
+			continue
+		}
 		t := addrList.([]interface{})
 		for _, j := range t {
 			k := j.(map[string]interface{})
-			if k["OS-EXT-IPS:type"] == "floating" && k["version"].(float64) == 4 {
+			if (!os.FloatingIpsOnly || (k["OS-EXT-IPS:type"] == "floating")) && k["version"].(float64) == 4 {
 				floatings = append(floatings, k["addr"].(string))
 			}
 		}
@@ -77,12 +90,23 @@ func (os OpenStack) listServers(provider *gophercloud.ProviderClient, tenantMapp
 		serverList, _ := servers.ExtractServers(page)
 
 		for _, s := range serverList {
+			addresses := os.extractAddresses(s.Addresses)
 			se := serverEntry{
 				Name:       s.Name,
 				TenantName: tenantMapping[s.TenantID],
-				Addresses:  extractFloating(s.Addresses),
+				Addresses:  addresses,
 			}
 			serverEntries = append(serverEntries, se)
+			for key, value := range s.Metadata {
+				if key == "dns-name" {
+					se = serverEntry{
+						Name:       value,
+						TenantName: "",
+						Addresses:  addresses,
+					}
+					serverEntries = append(serverEntries, se)
+				}
+			}
 		}
 
 		return true, nil
@@ -113,8 +137,12 @@ func (os OpenStack) fetchEntries() (DNSEntries, error) {
 	}
 
 	for _, srv := range servers {
-		name := srv.Name + "." + srv.TenantName
+		name := srv.Name
+		if srv.TenantName != "" {
+			name += "." + srv.TenantName
+		}
 		entries[name] = srv.Addresses
+		fmt.Println(name, srv.Addresses)
 	}
 
 	return entries, nil
